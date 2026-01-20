@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ARフライヤー (Aspect Ratio Fix)</title>
+  <title>状況応答型ARポスター (Final)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -71,7 +71,7 @@
   <div id="control-panel">
     <button id="btn-day" class="mode-btn">☀️ 昼</button>
     <button id="btn-night" class="mode-btn">🌙 夜</button>
-    <button id="btn-anim" class="mode-btn" data-state="on">✨ 演出: ON</button>
+    <button id="btn-anim" class="mode-btn" data-state="off">⚪️ 演出: OFF</button>
   </div>
 
   <a-scene 
@@ -83,7 +83,9 @@
 
     <a-assets>
       <video id="asset-day" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      
       <img id="asset-night" src="./assets/image-night.jpeg" crossorigin="anonymous" />
+      
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
@@ -105,47 +107,23 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // ■ アニメーションパターン
+      // アニメーションパターン
       const ANIMATION_PATTERNS = [
-        // 1. ポップアップ
-        {
-          name: "Pop",
-          reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0', opacity: '1' },
-          attrs: {
-            'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim'
-          }
-        },
-        // 2. 回転スピン
-        {
-          name: "Spin",
-          reset: { scale: '0 0 0', position: '0 0 0', rotation: '0 0 -180', opacity: '1' },
-          attrs: {
-            'animation': 'property: rotation; from: 0 0 -180; to: 0 0 0; dur: 1000; easing: easeOutBack; startEvents: play-anim',
-            'animation__scale': 'property: scale; from: 0 0 0; to: 1 1 1; dur: 1000; easing: easeOutBack; startEvents: play-anim'
-          }
-        },
-        // 3. ストロボ
-        {
-          name: "Strobe",
-          reset: { scale: '1 1 1', position: '0 0 0', rotation: '0 0 0', opacity: '0' },
-          attrs: {
-            'animation': 'property: opacity; from: 0; to: 1; dur: 80; loop: 5; dir: alternate; easing: linear; startEvents: play-anim'
-          }
-        },
-        // 4. カーテンライズ
-        {
-          name: "Curtain",
-          reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0', opacity: '1' },
-          attrs: {
-            'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim'
-          }
-        }
+        { name: "Pop", reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim' } },
+        { name: "Spin", reset: { scale: '0 0 0', position: '0 0 0', rotation: '0 0 -180', opacity: '1' }, attrs: { 'animation': 'property: rotation; from: 0 0 -180; to: 0 0 0; dur: 1000; easing: easeOutBack; startEvents: play-anim', 'animation__scale': 'property: scale; from: 0 0 0; to: 1 1 1; dur: 1000; easing: easeOutBack; startEvents: play-anim' } },
+        { name: "Strobe", reset: { scale: '1 1 1', position: '0 0 0', rotation: '0 0 0', opacity: '0' }, attrs: { 'animation': 'property: opacity; from: 0; to: 1; dur: 80; loop: 5; dir: alternate; easing: linear; startEvents: play-anim' } },
+        { name: "Curtain", reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim' } }
       ];
 
       const ASSET_IDS = { day: 'asset-day', night: 'asset-night' };
-      let currentMode = 'day';
+      
+      // 時間による初期モード判定
+      const currentHour = new Date().getHours();
+      let currentMode = (currentHour >= 6 && currentHour < 18) ? 'day' : 'night';
+      console.log(`現在の時間: ${currentHour}時, 初期モード: ${currentMode}`);
+
       let isUnlocked = false;
-      let isAnimEnabled = true;
+      let isAnimEnabled = false; // デフォルトOFF
 
       const screenEl = document.getElementById('ar-screen');
       const targetEntity = document.getElementById('target-entity');
@@ -161,13 +139,12 @@
 
       const getAssetType = (element) => element ? element.tagName : 'NONE';
 
-      // ■ アニメーション制御
+      // アニメーション制御
       const playRandomAnimation = () => {
         const oldAttrs = ['animation', 'animation__scale', 'animation__fade'];
         oldAttrs.forEach(attr => screenEl.removeAttribute(attr));
 
         if (!isAnimEnabled) {
-          // OFF時は正常な状態に戻して終了
           screenEl.setAttribute('scale', '1 1 1');
           screenEl.setAttribute('position', '0 0 0');
           screenEl.setAttribute('rotation', '0 0 0');
@@ -180,13 +157,11 @@
         if (pattern.reset) {
           Object.keys(pattern.reset).forEach(key => screenEl.setAttribute(key, pattern.reset[key]));
         }
-
         Object.keys(pattern.attrs).forEach(key => screenEl.setAttribute(key, pattern.attrs[key]));
-
         setTimeout(() => screenEl.emit('play-anim'), 50);
       };
 
-      // ■ コンテンツ更新
+      // コンテンツ更新
       const updateContent = (triggerAnim = true) => {
         const activeAsset = assets[currentMode];
         const type = getAssetType(activeAsset);
@@ -217,18 +192,17 @@
         }
       };
 
-      // 演出切り替えボタン
+      // ボタン操作
       btnAnim.addEventListener('click', (e) => {
         e.stopPropagation();
         isAnimEnabled = !isAnimEnabled;
-
         if (isAnimEnabled) {
           btnAnim.textContent = "✨ 演出: ON";
           btnAnim.setAttribute('data-state', 'on');
         } else {
           btnAnim.textContent = "⚪️ 演出: OFF";
           btnAnim.setAttribute('data-state', 'off');
-          playRandomAnimation(); // 強制リセット
+          playRandomAnimation();
         }
       });
 
@@ -268,10 +242,7 @@
       targetEntity.addEventListener("targetFound", () => {
         const activeAsset = assets[currentMode];
         if (isUnlocked && getAssetType(activeAsset) === 'VIDEO') activeAsset.play();
-        
-        if (isUnlocked) {
-            playRandomAnimation();
-        }
+        if (isUnlocked) playRandomAnimation();
       });
 
       targetEntity.addEventListener("targetLost", () => {
