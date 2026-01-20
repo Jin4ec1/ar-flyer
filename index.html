@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>状況応答型ARポスター (Final)</title>
+  <title>状況応答型ARポスター (Height Fixed)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -83,9 +83,7 @@
 
     <a-assets>
       <video id="asset-day" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-      
       <img id="asset-night" src="./assets/image-night.jpeg" crossorigin="anonymous" />
-      
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
@@ -107,6 +105,9 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      // マーカーの高さ設定 (A4縦なら1.414)
+      const MARKER_HEIGHT = 1.414;
+
       // アニメーションパターン
       const ANIMATION_PATTERNS = [
         { name: "Pop", reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim' } },
@@ -117,13 +118,12 @@
 
       const ASSET_IDS = { day: 'asset-day', night: 'asset-night' };
       
-      // 時間による初期モード判定
       const currentHour = new Date().getHours();
       let currentMode = (currentHour >= 6 && currentHour < 18) ? 'day' : 'night';
       console.log(`現在の時間: ${currentHour}時, 初期モード: ${currentMode}`);
 
       let isUnlocked = false;
-      let isAnimEnabled = false; // デフォルトOFF
+      let isAnimEnabled = false;
 
       const screenEl = document.getElementById('ar-screen');
       const targetEntity = document.getElementById('target-entity');
@@ -153,7 +153,6 @@
         }
 
         const pattern = ANIMATION_PATTERNS[Math.floor(Math.random() * ANIMATION_PATTERNS.length)];
-        
         if (pattern.reset) {
           Object.keys(pattern.reset).forEach(key => screenEl.setAttribute(key, pattern.reset[key]));
         }
@@ -161,7 +160,7 @@
         setTimeout(() => screenEl.emit('play-anim'), 50);
       };
 
-      // コンテンツ更新
+      // ■ コンテンツ更新 (高さ固定・幅調整ロジック)
       const updateContent = (triggerAnim = true) => {
         const activeAsset = assets[currentMode];
         const type = getAssetType(activeAsset);
@@ -176,6 +175,36 @@
         if (type !== 'NONE') {
           screenEl.setAttribute('material', 'src', `#${activeAsset.id}`);
           screenEl.setAttribute('material', 'opacity', 1);
+
+          // ★ サイズ調整 ★
+          if (currentMode === 'night' && type === 'IMG') {
+            const applyFixedHeight = () => {
+              if (activeAsset.naturalWidth > 0) {
+                // 画像の本来のアスペクト比 (幅 / 高さ)
+                const imgAspect = activeAsset.naturalWidth / activeAsset.naturalHeight;
+                
+                // 高さはマーカーと同じに固定
+                const newHeight = MARKER_HEIGHT;
+                // 幅をアスペクト比に合わせて計算
+                const newWidth = newHeight * imgAspect;
+
+                screenEl.setAttribute('height', newHeight);
+                screenEl.setAttribute('width', newWidth);
+                console.log(`Night Mode: Height fixed to ${newHeight}, Width adjusted to ${newWidth}`);
+              }
+            };
+
+            if (activeAsset.complete) {
+              applyFixedHeight();
+            } else {
+              activeAsset.onload = applyFixedHeight;
+            }
+
+          } else {
+            // 昼(動画)の場合は、マーカーピッタリに戻す
+            screenEl.setAttribute('width', '1');
+            screenEl.setAttribute('height', MARKER_HEIGHT);
+          }
 
           if (triggerAnim) playRandomAnimation();
 
