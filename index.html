@@ -163,10 +163,10 @@
         { name: "Curtain", reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim' } }
       ];
 
-      let currentMode = 'live'; // 初期状態は Live Mode (動画)
+      let currentMode = 'live'; 
       let isUnlocked = false;
       let isAnimEnabled = false;
-      let activeTarget = null; // 現在認識されているマーカーを保持
+      let activeTarget = null; 
 
       const guideEl = document.getElementById('start-guide');
       const btnLive = document.getElementById('btn-live');
@@ -187,7 +187,7 @@
 
       const getAssetType = (element) => element ? element.tagName : 'NONE';
 
-      // 演出再生処理 (引数で対象のスクリーンを受け取るように変更)
+      // 演出再生処理
       const playRandomAnimation = (screenEl) => {
         if (!screenEl) return;
         const oldAttrs = ['animation', 'animation__scale', 'animation__fade'];
@@ -211,7 +211,6 @@
 
       // 2. マーカーに応じたコンテンツの更新と切り替え
       const updateContent = (triggerAnim = true) => {
-        // 全動画を一旦停止
         allVideos.forEach(el => el.pause());
 
         if (!activeTarget) return;
@@ -219,7 +218,6 @@
         const screenEl = activeTarget.querySelector('.ar-screen');
         if (!screenEl) return;
 
-        // アクティブなマーカーに設定されたアセットIDを取得
         const videoId = activeTarget.getAttribute('data-video');
         const imageId = activeTarget.getAttribute('data-image');
         
@@ -229,7 +227,6 @@
         const activeAsset = currentMode === 'live' ? videoAsset : imageAsset;
         const type = getAssetType(activeAsset);
 
-        // アクティブではない動画は再生位置をリセット
         allVideos.forEach(el => {
           if (el !== activeAsset) el.currentTime = 0;
         });
@@ -258,10 +255,9 @@
           if (triggerAnim) playRandomAnimation(screenEl);
         }
 
-        // 動画の再生処理
         if (type === 'VIDEO' && isUnlocked && activeTarget.object3D.visible) {
           activeAsset.muted = false;
-          activeAsset.volume = parseFloat(volumeSlider.value); // 音量スライダーの値を反映
+          activeAsset.volume = parseFloat(volumeSlider.value);
           const delay = isAnimEnabled ? 300 : 0;
           setTimeout(() => {
              activeAsset.play().catch(e => console.log(e));
@@ -283,19 +279,31 @@
         updateContent(true);
       });
 
-      // 演出切り替えボタン
+      // ★修正箇所: 演出切り替えボタン
       btnAnim.addEventListener('click', (e) => {
         e.stopPropagation();
         isAnimEnabled = !isAnimEnabled;
         btnAnim.textContent = isAnimEnabled ? "✨ 演出: ON" : "⚪️ 演出: OFF";
         btnAnim.setAttribute('data-state', isAnimEnabled ? 'on' : 'off');
         
-        if (!isAnimEnabled && activeTarget) {
-           playRandomAnimation(activeTarget.querySelector('.ar-screen'));
+        if (activeTarget) {
+          // アニメーションの反映（ONならランダム再生、OFFなら初期化して固定）
+          playRandomAnimation(activeTarget.querySelector('.ar-screen'));
+
+          // 動画モードの場合、アニメーション変更によって動画が止まるのを防ぐため明示的に再生を継続する
+          if (currentMode === 'live' && isUnlocked && activeTarget.object3D.visible) {
+            const videoId = activeTarget.getAttribute('data-video');
+            const videoAsset = document.getElementById(videoId);
+            if (videoAsset) {
+              const delay = isAnimEnabled ? 300 : 0;
+              setTimeout(() => {
+                videoAsset.play().catch(e => console.log(e));
+              }, delay);
+            }
+          }
         }
       });
 
-      // ユーザーインタラクションによる音声・動画の制限解除
       const unlockAudio = () => {
         if (isUnlocked) return;
         allVideos.forEach(el => {
@@ -311,10 +319,9 @@
       document.body.addEventListener('click', unlockAudio, { once: true });
       document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
-      // 複数マーカーに対するイベントリスナーの設定
       allTargets.forEach(target => {
         target.addEventListener("targetFound", () => {
-          activeTarget = target; // 現在認識したマーカーを記憶
+          activeTarget = target;
           updateContent(false);
           if (isUnlocked) playRandomAnimation(target.querySelector('.ar-screen'));
         });
