@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>状況応答型ARポスター (Mode Fixed)</title>
+  <title>状況応答型ARポスター (複数マーカー・音量調整対応版)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -18,12 +18,39 @@
       left: 0;
       width: 100%;
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
       gap: 15px;
       z-index: 9999;
       pointer-events: none;
       padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    /* 音量スライダーのスタイル */
+    .volume-group {
+      pointer-events: auto;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      backdrop-filter: blur(5px);
+    }
+
+    .volume-group input[type="range"] {
+      width: 120px;
     }
 
     .mode-btn {
@@ -44,8 +71,8 @@
     .mode-btn:active { transform: scale(0.95); }
 
     /* ボタン色のカスタマイズ */
-    #btn-live { background-color: #ff4757; }   /* Live用：エネルギッシュな赤 */
-    #btn-visual { background-color: #2f3542; } /* Visual用：シックなダークグレー */
+    #btn-live { background-color: #ff4757; }   /* Live用 */
+    #btn-visual { background-color: #2f3542; } /* Visual用 */
     
     #btn-anim[data-state="on"] { background-color: #e91e63; }
     #btn-anim[data-state="off"] { background-color: #7f8c8d; opacity: 0.8; }
@@ -70,9 +97,16 @@
   <div id="start-guide">画面をタップして<br>ARをスタート</div>
 
   <div id="control-panel">
-    <button id="btn-live" class="mode-btn">🔴 Live Mode(動画)</button>
-    <button id="btn-visual" class="mode-btn">🖼️ Visual Mode(画像)</button>
-    <button id="btn-anim" class="mode-btn" data-state="off">⚪️ 演出: OFF</button>
+    <div class="volume-group">
+      <label for="volume-slider">🔈 音量:</label>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1">
+    </div>
+
+    <div class="btn-group">
+      <button id="btn-live" class="mode-btn">🔴 Live Mode(動画)</button>
+      <button id="btn-visual" class="mode-btn">🖼️ Visual Mode(画像)</button>
+      <button id="btn-anim" class="mode-btn" data-state="off">⚪️ 演出: OFF</button>
+    </div>
   </div>
 
   <a-scene 
@@ -83,16 +117,18 @@
     device-orientation-permission-ui="enabled: false">
 
     <a-assets>
-      <video id="asset-day" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-      <img id="asset-night" src="./assets/image-night.jpeg" crossorigin="anonymous" />
+      <video id="video-0" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <img id="image-0" src="./assets/image-night.jpeg" crossorigin="anonymous" />
+
+      <video id="video-1" src="./assets/video-day-2.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <img id="image-1" src="./assets/image-night-2.jpeg" crossorigin="anonymous" />
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
-      
+    <a-entity mindar-image-target="targetIndex: 0" class="ar-target" data-video="video-0" data-image="image-0">
       <a-plane 
-        id="ar-screen"
+        class="ar-screen"
         position="0 0 0" 
         width="1" 
         height="1.414" 
@@ -100,8 +136,20 @@
         material="shader: flat; transparent: true; opacity: 0;"
         visible="true">
       </a-plane>
-
     </a-entity>
+
+    <a-entity mindar-image-target="targetIndex: 1" class="ar-target" data-video="video-1" data-image="image-1">
+      <a-plane 
+        class="ar-screen"
+        position="0 0 0" 
+        width="1" 
+        height="1.414" 
+        rotation="0 0 0"
+        material="shader: flat; transparent: true; opacity: 0;"
+        visible="true">
+      </a-plane>
+    </a-entity>
+
   </a-scene>
 
   <script>
@@ -115,29 +163,33 @@
         { name: "Curtain", reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim' } }
       ];
 
-      const ASSET_IDS = { day: 'asset-day', night: 'asset-night' };
-      
-      // 初期モード設定
-      let currentMode = 'day'; // 初期はLive Mode(動画)
-
+      let currentMode = 'live'; // 初期状態は Live Mode (動画)
       let isUnlocked = false;
       let isAnimEnabled = false;
+      let activeTarget = null; // 現在認識されているマーカーを保持
 
-      const screenEl = document.getElementById('ar-screen');
-      const targetEntity = document.getElementById('target-entity');
       const guideEl = document.getElementById('start-guide');
       const btnLive = document.getElementById('btn-live');
       const btnVisual = document.getElementById('btn-visual');
       const btnAnim = document.getElementById('btn-anim');
+      const volumeSlider = document.getElementById('volume-slider');
 
-      const assets = {
-        day: document.getElementById(ASSET_IDS.day),
-        night: document.getElementById(ASSET_IDS.night)
-      };
+      const allTargets = document.querySelectorAll('.ar-target');
+      const allVideos = document.querySelectorAll('video');
+
+      // 1. 音量調整のイベント
+      volumeSlider.addEventListener('input', (e) => {
+        const volumeValue = parseFloat(e.target.value);
+        allVideos.forEach(video => {
+          video.volume = volumeValue;
+        });
+      });
 
       const getAssetType = (element) => element ? element.tagName : 'NONE';
 
-      const playRandomAnimation = () => {
+      // 演出再生処理 (引数で対象のスクリーンを受け取るように変更)
+      const playRandomAnimation = (screenEl) => {
+        if (!screenEl) return;
         const oldAttrs = ['animation', 'animation__scale', 'animation__fade'];
         oldAttrs.forEach(attr => screenEl.removeAttribute(attr));
 
@@ -157,22 +209,36 @@
         setTimeout(() => screenEl.emit('play-anim'), 50);
       };
 
+      // 2. マーカーに応じたコンテンツの更新と切り替え
       const updateContent = (triggerAnim = true) => {
-        const activeAsset = assets[currentMode];
+        // 全動画を一旦停止
+        allVideos.forEach(el => el.pause());
+
+        if (!activeTarget) return;
+
+        const screenEl = activeTarget.querySelector('.ar-screen');
+        if (!screenEl) return;
+
+        // アクティブなマーカーに設定されたアセットIDを取得
+        const videoId = activeTarget.getAttribute('data-video');
+        const imageId = activeTarget.getAttribute('data-image');
+        
+        const videoAsset = document.getElementById(videoId);
+        const imageAsset = document.getElementById(imageId);
+
+        const activeAsset = currentMode === 'live' ? videoAsset : imageAsset;
         const type = getAssetType(activeAsset);
 
-        Object.values(assets).forEach(el => {
-          if (getAssetType(el) === 'VIDEO') {
-            el.pause();
-            if (el !== activeAsset) el.currentTime = 0; 
-          }
+        // アクティブではない動画は再生位置をリセット
+        allVideos.forEach(el => {
+          if (el !== activeAsset) el.currentTime = 0;
         });
 
         if (type !== 'NONE') {
           screenEl.setAttribute('material', 'src', `#${activeAsset.id}`);
           screenEl.setAttribute('material', 'opacity', 1);
 
-          if (currentMode === 'night' && type === 'IMG') {
+          if (currentMode === 'visual' && type === 'IMG') {
             const applyFixedHeight = () => {
               if (activeAsset.naturalWidth > 0) {
                 const imgAspect = activeAsset.naturalWidth / activeAsset.naturalHeight;
@@ -189,11 +255,13 @@
             screenEl.setAttribute('height', MARKER_HEIGHT);
           }
 
-          if (triggerAnim) playRandomAnimation();
+          if (triggerAnim) playRandomAnimation(screenEl);
         }
 
-        if (type === 'VIDEO' && isUnlocked && targetEntity.object3D.visible) {
+        // 動画の再生処理
+        if (type === 'VIDEO' && isUnlocked && activeTarget.object3D.visible) {
           activeAsset.muted = false;
+          activeAsset.volume = parseFloat(volumeSlider.value); // 音量スライダーの値を反映
           const delay = isAnimEnabled ? 300 : 0;
           setTimeout(() => {
              activeAsset.play().catch(e => console.log(e));
@@ -204,32 +272,35 @@
       // Live Mode ボタン
       btnLive.addEventListener('click', (e) => {
         e.stopPropagation();
-        currentMode = 'day';
+        currentMode = 'live';
         updateContent(true);
       });
 
       // Visual Mode ボタン
       btnVisual.addEventListener('click', (e) => {
         e.stopPropagation();
-        currentMode = 'night';
+        currentMode = 'visual';
         updateContent(true);
       });
 
+      // 演出切り替えボタン
       btnAnim.addEventListener('click', (e) => {
         e.stopPropagation();
         isAnimEnabled = !isAnimEnabled;
         btnAnim.textContent = isAnimEnabled ? "✨ 演出: ON" : "⚪️ 演出: OFF";
         btnAnim.setAttribute('data-state', isAnimEnabled ? 'on' : 'off');
-        if (!isAnimEnabled) playRandomAnimation();
+        
+        if (!isAnimEnabled && activeTarget) {
+           playRandomAnimation(activeTarget.querySelector('.ar-screen'));
+        }
       });
 
+      // ユーザーインタラクションによる音声・動画の制限解除
       const unlockAudio = () => {
         if (isUnlocked) return;
-        Object.values(assets).forEach(el => {
-          if (getAssetType(el) === 'VIDEO') {
-            el.muted = false; 
-            el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(e=>{});
-          }
+        allVideos.forEach(el => {
+          el.muted = false; 
+          el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(e=>{});
         });
         isUnlocked = true;
         guideEl.style.opacity = '0';
@@ -240,18 +311,25 @@
       document.body.addEventListener('click', unlockAudio, { once: true });
       document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
-      targetEntity.addEventListener("targetFound", () => {
-        const activeAsset = assets[currentMode];
-        if (isUnlocked && getAssetType(activeAsset) === 'VIDEO') activeAsset.play();
-        if (isUnlocked) playRandomAnimation();
+      // 複数マーカーに対するイベントリスナーの設定
+      allTargets.forEach(target => {
+        target.addEventListener("targetFound", () => {
+          activeTarget = target; // 現在認識したマーカーを記憶
+          updateContent(false);
+          if (isUnlocked) playRandomAnimation(target.querySelector('.ar-screen'));
+        });
+
+        target.addEventListener("targetLost", () => {
+          const videoId = target.getAttribute('data-video');
+          const videoAsset = document.getElementById(videoId);
+          if (videoAsset) videoAsset.pause();
+          
+          if (activeTarget === target) {
+            activeTarget = null;
+          }
+        });
       });
 
-      targetEntity.addEventListener("targetLost", () => {
-        const activeAsset = assets[currentMode];
-        if (getAssetType(activeAsset) === 'VIDEO') activeAsset.pause();
-      });
-
-      updateContent(false);
     });
   </script>
 </body>
