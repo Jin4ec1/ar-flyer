@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>状況応答型ARポスター (3マーカー対応版)</title>
+  <title>状況応答型ARポスター (アスペクト比・動画再生修正版)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -69,10 +69,8 @@
     
     .mode-btn:active { transform: scale(0.95); }
 
-    /* ボタン色のカスタマイズ */
-    #btn-live { background-color: #ff4757; }   /* Live用 */
-    #btn-visual { background-color: #2f3542; } /* Visual用 */
-    
+    #btn-live { background-color: #ff4757; }
+    #btn-visual { background-color: #2f3542; }
     #btn-anim[data-state="on"] { background-color: #e91e63; }
     #btn-anim[data-state="off"] { background-color: #7f8c8d; opacity: 0.8; }
 
@@ -116,52 +114,31 @@
     device-orientation-permission-ui="enabled: false">
 
     <a-assets>
-      <video id="video-1" src="./assets/video-day1.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <video id="video-1" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
       <img id="image-1" src="./assets/image-night1.jpeg" crossorigin="anonymous" />
 
-      <video id="video-2" src="./assets/video-day2.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <video id="video-2" src="./assets/video-day-2.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
       <img id="image-2" src="./assets/image-night2.jpeg" crossorigin="anonymous" />
 
-      <video id="video-3" src="./assets/video-day3.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <video id="video-3" src="./assets/video-day-3.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
       <img id="image-3" src="./assets/image-night3.jpeg" crossorigin="anonymous" />
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" class="ar-target" data-video="video-1" data-image="image-1">
-      <a-plane 
-        class="ar-screen"
-        position="0 0 0" 
-        width="1" 
-        height="1.414" 
-        rotation="0 0 0"
-        material="shader: flat; transparent: true; opacity: 0;"
-        visible="true">
-      </a-plane>
+      <a-video class="ar-screen-video" src="#video-1" position="0 0 0" visible="false" material="transparent: true"></a-video>
+      <a-image class="ar-screen-image" src="#image-1" position="0 0 0" visible="false" material="transparent: true"></a-image>
     </a-entity>
 
     <a-entity mindar-image-target="targetIndex: 1" class="ar-target" data-video="video-2" data-image="image-2">
-      <a-plane 
-        class="ar-screen"
-        position="0 0 0" 
-        width="1" 
-        height="1.414" 
-        rotation="0 0 0"
-        material="shader: flat; transparent: true; opacity: 0;"
-        visible="true">
-      </a-plane>
+      <a-video class="ar-screen-video" src="#video-2" position="0 0 0" visible="false" material="transparent: true"></a-video>
+      <a-image class="ar-screen-image" src="#image-2" position="0 0 0" visible="false" material="transparent: true"></a-image>
     </a-entity>
 
     <a-entity mindar-image-target="targetIndex: 2" class="ar-target" data-video="video-3" data-image="image-3">
-      <a-plane 
-        class="ar-screen"
-        position="0 0 0" 
-        width="1" 
-        height="1.414" 
-        rotation="0 0 0"
-        material="shader: flat; transparent: true; opacity: 0;"
-        visible="true">
-      </a-plane>
+      <a-video class="ar-screen-video" src="#video-3" position="0 0 0" visible="false" material="transparent: true"></a-video>
+      <a-image class="ar-screen-image" src="#image-3" position="0 0 0" visible="false" material="transparent: true"></a-image>
     </a-entity>
 
   </a-scene>
@@ -169,10 +146,9 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const ANIMATION_PATTERNS = [
-        { name: "Pop", reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim' } },
-        { name: "Spin", reset: { scale: '0 0 0', position: '0 0 0', rotation: '0 0 -180', opacity: '1' }, attrs: { 'animation': 'property: rotation; from: 0 0 -180; to: 0 0 0; dur: 1000; easing: easeOutBack; startEvents: play-anim', 'animation__scale': 'property: scale; from: 0 0 0; to: 1 1 1; dur: 1000; easing: easeOutBack; startEvents: play-anim' } },
-        { name: "Strobe", reset: { scale: '1 1 1', position: '0 0 0', rotation: '0 0 0', opacity: '0' }, attrs: { 'animation': 'property: opacity; from: 0; to: 1; dur: 80; loop: 5; dir: alternate; easing: linear; startEvents: play-anim' } },
-        { name: "Curtain", reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim' } }
+        { name: "Pop", reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0' }, attrs: { 'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim' } },
+        { name: "Spin", reset: { scale: '0 0 0', position: '0 0 0', rotation: '0 0 -180' }, attrs: { 'animation': 'property: rotation; from: 0 0 -180; to: 0 0 0; dur: 1000; easing: easeOutBack; startEvents: play-anim', 'animation__scale': 'property: scale; from: 0 0 0; to: 1 1 1; dur: 1000; easing: easeOutBack; startEvents: play-anim' } },
+        { name: "Curtain", reset: { scale: '1 0 1', position: '0 0 0', rotation: '0 0 0' }, attrs: { 'animation': 'property: scale; from: 1 0 1; to: 1 1 1; dur: 800; easing: easeOutExpo; startEvents: play-anim' } }
       ];
 
       let currentMode = 'live'; 
@@ -189,7 +165,7 @@
       const allTargets = document.querySelectorAll('.ar-target');
       const allVideos = document.querySelectorAll('video');
 
-      // 1. 音量調整のイベント
+      // 音量調整
       volumeSlider.addEventListener('input', (e) => {
         const volumeValue = parseFloat(e.target.value);
         allVideos.forEach(video => {
@@ -197,19 +173,16 @@
         });
       });
 
-      const getAssetType = (element) => element ? element.tagName : 'NONE';
-
-      // 演出再生処理
+      // アニメーション再生処理
       const playRandomAnimation = (screenEl) => {
         if (!screenEl) return;
-        const oldAttrs = ['animation', 'animation__scale', 'animation__fade'];
+        const oldAttrs = ['animation', 'animation__scale'];
         oldAttrs.forEach(attr => screenEl.removeAttribute(attr));
 
         if (!isAnimEnabled) {
           screenEl.setAttribute('scale', '1 1 1');
           screenEl.setAttribute('position', '0 0 0');
           screenEl.setAttribute('rotation', '0 0 0');
-          screenEl.setAttribute('material', 'opacity', 1);
           return;
         }
 
@@ -221,77 +194,101 @@
         setTimeout(() => screenEl.emit('play-anim'), 50);
       };
 
-      // 2. マーカーに応じたコンテンツの更新と切り替え
+      // サイズ（アスペクト比）の動的調整
+      const adjustSize = (asset, plane) => {
+        let w, h;
+        if (asset.tagName === 'VIDEO') {
+          w = asset.videoWidth;
+          h = asset.videoHeight;
+        } else {
+          w = asset.naturalWidth;
+          h = asset.naturalHeight;
+        }
+        
+        if (w > 0 && h > 0) {
+          plane.setAttribute('width', '1');
+          plane.setAttribute('height', (h / w).toString());
+        }
+      };
+
+      // コンテンツの更新処理
       const updateContent = (triggerAnim = true) => {
+        // すべての動画を一旦一時停止
         allVideos.forEach(el => el.pause());
 
         if (!activeTarget) return;
 
-        const screenEl = activeTarget.querySelector('.ar-screen');
-        if (!screenEl) return;
-
+        const videoPlane = activeTarget.querySelector('.ar-screen-video');
+        const imagePlane = activeTarget.querySelector('.ar-screen-image');
+        
         const videoId = activeTarget.getAttribute('data-video');
         const imageId = activeTarget.getAttribute('data-image');
         
         const videoAsset = document.getElementById(videoId);
         const imageAsset = document.getElementById(imageId);
 
-        const activeAsset = currentMode === 'live' ? videoAsset : imageAsset;
-        const type = getAssetType(activeAsset);
+        // 両方を一旦非表示にリセット
+        [videoPlane, imagePlane].forEach(plane => {
+          plane.setAttribute('visible', 'false');
+          plane.removeAttribute('animation');
+          plane.removeAttribute('animation__scale');
+          plane.setAttribute('scale', '1 1 1');
+        });
 
+        const isLive = currentMode === 'live';
+        const activePlane = isLive ? videoPlane : imagePlane;
+        const activeAsset = isLive ? videoAsset : imageAsset;
+
+        // アクティブな要素のみ表示
+        activePlane.setAttribute('visible', 'true');
+
+        // 非表示になった動画は巻き戻す
         allVideos.forEach(el => {
           if (el !== activeAsset) el.currentTime = 0;
         });
 
-        if (type !== 'NONE') {
-          screenEl.setAttribute('material', 'src', `#${activeAsset.id}`);
-          screenEl.setAttribute('material', 'opacity', 1);
-
-          if (currentMode === 'visual' && type === 'IMG') {
-            const applyFixedHeight = () => {
-              if (activeAsset.naturalWidth > 0) {
-                const imgAspect = activeAsset.naturalWidth / activeAsset.naturalHeight;
-                const newHeight = MARKER_HEIGHT;
-                const newWidth = newHeight * imgAspect;
-                screenEl.setAttribute('height', newHeight);
-                screenEl.setAttribute('width', newWidth);
-              }
-            };
-            if (activeAsset.complete) applyFixedHeight();
-            else activeAsset.onload = applyFixedHeight;
+        // 確実なサイズ取得と適用
+        if (activeAsset.tagName === 'VIDEO') {
+          // 動画の場合：データが十分読み込まれているか判定
+          if (activeAsset.readyState >= 2) { 
+            adjustSize(activeAsset, activePlane);
           } else {
-            screenEl.setAttribute('width', '1');
-            screenEl.setAttribute('height', MARKER_HEIGHT);
+            // まだならロード完了を待ってから適用
+            activeAsset.addEventListener('loadeddata', () => adjustSize(activeAsset, activePlane), { once: true });
+            activeAsset.load(); // 読み込みを強制
           }
-
-          if (triggerAnim) playRandomAnimation(screenEl);
+        } else {
+          // 画像の場合
+          if (activeAsset.complete) {
+            adjustSize(activeAsset, activePlane);
+          } else {
+            activeAsset.onload = () => adjustSize(activeAsset, activePlane);
+          }
         }
 
-        if (type === 'VIDEO' && isUnlocked && activeTarget.object3D.visible) {
+        if (triggerAnim) playRandomAnimation(activePlane);
+
+        // 動画の再生 (即座に実行)
+        if (isLive && isUnlocked && activeTarget.object3D.visible) {
           activeAsset.muted = false;
           activeAsset.volume = parseFloat(volumeSlider.value);
-          const delay = isAnimEnabled ? 300 : 0;
-          setTimeout(() => {
-             activeAsset.play().catch(e => console.log(e));
-          }, delay);
+          activeAsset.play().catch(e => console.warn("動画再生エラー:", e));
         }
       };
 
-      // Live Mode ボタン
+      // モード切替ボタン
       btnLive.addEventListener('click', (e) => {
         e.stopPropagation();
         currentMode = 'live';
         updateContent(true);
       });
 
-      // Visual Mode ボタン
       btnVisual.addEventListener('click', (e) => {
         e.stopPropagation();
         currentMode = 'visual';
         updateContent(true);
       });
 
-      // 演出切り替えボタン
       btnAnim.addEventListener('click', (e) => {
         e.stopPropagation();
         isAnimEnabled = !isAnimEnabled;
@@ -299,41 +296,56 @@
         btnAnim.setAttribute('data-state', isAnimEnabled ? 'on' : 'off');
         
         if (activeTarget) {
-          playRandomAnimation(activeTarget.querySelector('.ar-screen'));
+          const isLive = currentMode === 'live';
+          const activePlane = activeTarget.querySelector(isLive ? '.ar-screen-video' : '.ar-screen-image');
+          playRandomAnimation(activePlane);
 
-          if (currentMode === 'live' && isUnlocked && activeTarget.object3D.visible) {
+          if (isLive && isUnlocked && activeTarget.object3D.visible) {
             const videoId = activeTarget.getAttribute('data-video');
             const videoAsset = document.getElementById(videoId);
             if (videoAsset) {
-              const delay = isAnimEnabled ? 300 : 0;
-              setTimeout(() => {
-                videoAsset.play().catch(e => console.log(e));
-              }, delay);
+              videoAsset.play().catch(e => console.log(e));
             }
           }
         }
       });
 
+      // 初回タップ時のブラウザ制限(自動再生ブロック)解除処理
       const unlockAudio = () => {
         if (isUnlocked) return;
+        isUnlocked = true;
+        
+        // 全動画のロックを解除するために一度再生してすぐ止める
         allVideos.forEach(el => {
           el.muted = false; 
-          el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(e=>{});
+          const playPromise = el.play();
+          if (playPromise !== undefined) {
+             playPromise.then(() => {
+               el.pause();
+               el.currentTime = 0;
+             }).catch(e => console.warn("Unlock Error:", e));
+          }
         });
-        isUnlocked = true;
+
         guideEl.style.opacity = '0';
         setTimeout(() => guideEl.style.display = 'none', 500);
-        updateContent(true);
+        updateContent(true); // 画面更新・再生
       };
 
       document.body.addEventListener('click', unlockAudio, { once: true });
       document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
+      // マーカーを認識した時 / 見失った時の処理
       allTargets.forEach(target => {
         target.addEventListener("targetFound", () => {
           activeTarget = target;
           updateContent(false);
-          if (isUnlocked) playRandomAnimation(target.querySelector('.ar-screen'));
+          
+          if (isUnlocked) {
+            const isLive = currentMode === 'live';
+            const activePlane = target.querySelector(isLive ? '.ar-screen-video' : '.ar-screen-image');
+            playRandomAnimation(activePlane);
+          }
         });
 
         target.addEventListener("targetLost", () => {
