@@ -34,7 +34,6 @@
       gap: 15px;
     }
 
-    /* 音量スライダーのスタイル */
     .volume-group {
       pointer-events: auto;
       background: rgba(0, 0, 0, 0.6);
@@ -169,8 +168,6 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const MARKER_HEIGHT = 1.414;
-
       const ANIMATION_PATTERNS = [
         { name: "Pop", reset: { scale: '0.01 0.01 0.01', position: '0 0 0', rotation: '0 0 0', opacity: '1' }, attrs: { 'animation': 'property: scale; from: 0.01 0.01 0.01; to: 1 1 1; dur: 800; easing: easeOutElastic; startEvents: play-anim' } },
         { name: "Spin", reset: { scale: '0 0 0', position: '0 0 0', rotation: '0 0 -180', opacity: '1' }, attrs: { 'animation': 'property: rotation; from: 0 0 -180; to: 0 0 0; dur: 1000; easing: easeOutBack; startEvents: play-anim', 'animation__scale': 'property: scale; from: 0 0 0; to: 1 1 1; dur: 1000; easing: easeOutBack; startEvents: play-anim' } },
