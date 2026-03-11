@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>状況応答型ARポスター (複数マーカー・音量調整対応版)</title>
+  <title>状況応答型ARポスター (3マーカー対応版)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -117,16 +117,19 @@
     device-orientation-permission-ui="enabled: false">
 
     <a-assets>
-      <video id="video-0" src="./assets/video-day.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-      <img id="image-0" src="./assets/image-night.jpeg" crossorigin="anonymous" />
+      <video id="video-1" src="./assets/video-day1.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <img id="image-1" src="./assets/image-night1.jpeg" crossorigin="anonymous" />
 
-      <video id="video-1" src="./assets/video-day-2.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-      <img id="image-1" src="./assets/image-night-2.jpeg" crossorigin="anonymous" />
+      <video id="video-2" src="./assets/video-day2.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <img id="image-2" src="./assets/image-night2.jpeg" crossorigin="anonymous" />
+
+      <video id="video-3" src="./assets/video-day3.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+      <img id="image-3" src="./assets/image-night3.jpeg" crossorigin="anonymous" />
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" class="ar-target" data-video="video-0" data-image="image-0">
+    <a-entity mindar-image-target="targetIndex: 0" class="ar-target" data-video="video-1" data-image="image-1">
       <a-plane 
         class="ar-screen"
         position="0 0 0" 
@@ -138,7 +141,19 @@
       </a-plane>
     </a-entity>
 
-    <a-entity mindar-image-target="targetIndex: 1" class="ar-target" data-video="video-1" data-image="image-1">
+    <a-entity mindar-image-target="targetIndex: 1" class="ar-target" data-video="video-2" data-image="image-2">
+      <a-plane 
+        class="ar-screen"
+        position="0 0 0" 
+        width="1" 
+        height="1.414" 
+        rotation="0 0 0"
+        material="shader: flat; transparent: true; opacity: 0;"
+        visible="true">
+      </a-plane>
+    </a-entity>
+
+    <a-entity mindar-image-target="targetIndex: 2" class="ar-target" data-video="video-3" data-image="image-3">
       <a-plane 
         class="ar-screen"
         position="0 0 0" 
@@ -279,7 +294,7 @@
         updateContent(true);
       });
 
-      // ★修正箇所: 演出切り替えボタン
+      // 演出切り替えボタン
       btnAnim.addEventListener('click', (e) => {
         e.stopPropagation();
         isAnimEnabled = !isAnimEnabled;
@@ -287,10 +302,8 @@
         btnAnim.setAttribute('data-state', isAnimEnabled ? 'on' : 'off');
         
         if (activeTarget) {
-          // アニメーションの反映（ONならランダム再生、OFFなら初期化して固定）
           playRandomAnimation(activeTarget.querySelector('.ar-screen'));
 
-          // 動画モードの場合、アニメーション変更によって動画が止まるのを防ぐため明示的に再生を継続する
           if (currentMode === 'live' && isUnlocked && activeTarget.object3D.visible) {
             const videoId = activeTarget.getAttribute('data-video');
             const videoAsset = document.getElementById(videoId);
