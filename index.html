@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>状況応答型ARポスター (アスペクト比・動画再生修正版)</title>
+  <title>状況応答型ARポスター (アスペクト比・自動再生修正版)</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -213,7 +213,6 @@
 
       // コンテンツの更新処理
       const updateContent = (triggerAnim = true) => {
-        // すべての動画を一旦一時停止
         allVideos.forEach(el => el.pause());
 
         if (!activeTarget) return;
@@ -227,7 +226,6 @@
         const videoAsset = document.getElementById(videoId);
         const imageAsset = document.getElementById(imageId);
 
-        // 両方を一旦非表示にリセット
         [videoPlane, imagePlane].forEach(plane => {
           plane.setAttribute('visible', 'false');
           plane.removeAttribute('animation');
@@ -239,26 +237,20 @@
         const activePlane = isLive ? videoPlane : imagePlane;
         const activeAsset = isLive ? videoAsset : imageAsset;
 
-        // アクティブな要素のみ表示
         activePlane.setAttribute('visible', 'true');
 
-        // 非表示になった動画は巻き戻す
         allVideos.forEach(el => {
           if (el !== activeAsset) el.currentTime = 0;
         });
 
-        // 確実なサイズ取得と適用
         if (activeAsset.tagName === 'VIDEO') {
-          // 動画の場合：データが十分読み込まれているか判定
           if (activeAsset.readyState >= 2) { 
             adjustSize(activeAsset, activePlane);
           } else {
-            // まだならロード完了を待ってから適用
             activeAsset.addEventListener('loadeddata', () => adjustSize(activeAsset, activePlane), { once: true });
-            activeAsset.load(); // 読み込みを強制
+            activeAsset.load(); 
           }
         } else {
-          // 画像の場合
           if (activeAsset.complete) {
             adjustSize(activeAsset, activePlane);
           } else {
@@ -268,15 +260,14 @@
 
         if (triggerAnim) playRandomAnimation(activePlane);
 
-        // 動画の再生 (即座に実行)
-        if (isLive && isUnlocked && activeTarget.object3D.visible) {
+        // ★修正ポイント：厳密すぎる visible 判定を外し、ロック解除されていれば再生する
+        if (isLive && isUnlocked) {
           activeAsset.muted = false;
           activeAsset.volume = parseFloat(volumeSlider.value);
           activeAsset.play().catch(e => console.warn("動画再生エラー:", e));
         }
       };
 
-      // モード切替ボタン
       btnLive.addEventListener('click', (e) => {
         e.stopPropagation();
         currentMode = 'live';
@@ -300,7 +291,8 @@
           const activePlane = activeTarget.querySelector(isLive ? '.ar-screen-video' : '.ar-screen-image');
           playRandomAnimation(activePlane);
 
-          if (isLive && isUnlocked && activeTarget.object3D.visible) {
+          // ★ここも同様に厳密すぎる判定を外しました
+          if (isLive && isUnlocked) {
             const videoId = activeTarget.getAttribute('data-video');
             const videoAsset = document.getElementById(videoId);
             if (videoAsset) {
@@ -310,12 +302,10 @@
         }
       });
 
-      // 初回タップ時のブラウザ制限(自動再生ブロック)解除処理
       const unlockAudio = () => {
         if (isUnlocked) return;
         isUnlocked = true;
         
-        // 全動画のロックを解除するために一度再生してすぐ止める
         allVideos.forEach(el => {
           el.muted = false; 
           const playPromise = el.play();
@@ -329,17 +319,16 @@
 
         guideEl.style.opacity = '0';
         setTimeout(() => guideEl.style.display = 'none', 500);
-        updateContent(true); // 画面更新・再生
+        updateContent(true); 
       };
 
       document.body.addEventListener('click', unlockAudio, { once: true });
       document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
-      // マーカーを認識した時 / 見失った時の処理
       allTargets.forEach(target => {
         target.addEventListener("targetFound", () => {
           activeTarget = target;
-          updateContent(false);
+          updateContent(false); // この中で自動再生が走ります
           
           if (isUnlocked) {
             const isLive = currentMode === 'live';
